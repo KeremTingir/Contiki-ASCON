@@ -4,10 +4,12 @@ Bu proje, Contiki-NG işletim sistemi üzerinde çalışan basit bir UDP istemci
 
 ## Proje Yapısı
 
-Bu proje iki ana bölümden oluşmaktadır:
+Bu proje iki ana uygulamadan oluşmaktadır:
 
-1.  **UDP İstemci (client.c):** Belirli bir periyotta sunucuya şifrelenmiş UDP paketleri gönderir. Ayrıca gönderilen paketler, kaçırılan paketler ve enerji tüketimi gibi metrikleri kaydeder ve görüntüler.
-2.  **UDP Sunucu (server.c):** İstemciden gelen şifrelenmiş UDP paketlerini alır, şifresini çözer, işlem yapar ve ardından istemciye şifrelenmiş bir yanıt gönderir. Ayrıca alınan ve gönderilen paketler ve enerji tüketimi gibi metrikleri kaydeder ve görüntüler.
+1.  **UDP İstemci (udp-client):** Belirli bir periyotta sunucuya şifrelenmiş UDP paketleri gönderir. Ayrıca gönderilen paketler, kaçırılan paketler ve enerji tüketimi gibi metrikleri kaydeder ve görüntüler.
+2.  **UDP Sunucu (udp-server):** İstemciden gelen şifrelenmiş UDP paketlerini alır, şifresini çözer, işlem yapar ve ardından istemciye şifrelenmiş bir yanıt gönderir. Ayrıca alınan ve gönderilen paketler ve enerji tüketimi gibi metrikleri kaydeder ve görüntüler.
+
+Bu uygulamalar aynı Makefile dosyası üzerinden derlenir ve ayrı ayrı node'lara yüklenir.
 
 ## Gerekli Kütüphaneler
 
@@ -17,36 +19,33 @@ Bu proje iki ana bölümden oluşmaktadır:
 ## Kurulum
 
 1.  **Contiki-NG Kurulumu:** Contiki-NG işletim sistemini geliştirme ortamınıza kurun.
-2.  **Ascon Kütüphanesi:** Ascon kütüphanesini indirin ve Contiki-NG projenize entegre edin. Ascon kütüphanesinin header dosyalarını (örneğin, `ascon.h`) projenizin include dizininde bulundurmanız gerekebilir.
-3.  **Proje Dosyaları:** `client.c` ve `server.c` dosyalarını Contiki-NG projenizin uygulama dizinine (genellikle `examples/`) ekleyin.
-4.  **Makefile:** `Makefile` dosyanızı, uygulama dosyalarını ve gerekli Contiki-NG modüllerini içerecek şekilde güncelleyin. Örnek bir `Makefile` şuna benzer olabilir:
+2.  **Ascon Kütüphanesi:** Ascon kütüphanesini indirin ve Contiki-NG projenize entegre edin. `ascon.h` header dosyası ve `ascon.c` kaynak dosyasını projenizin uygun dizinlerine ekleyin. Bu örnekte, `ascon.c` dosyası `PROJECT_SOURCEFILES` değişkenine eklenmiştir. `ascon.h` başlık dosyasının bulunduğu dizin, `CFLAGS` aracılığıyla derleyiciye tanıtılmıştır.
+3.  **Proje Dosyaları:** `client.c` ve `server.c` dosyalarını Contiki-NG projenizin uygulama dizinine (genellikle `examples/`) ekleyin. Bu proje için `udp-client` ve `udp-server` isimleriyle iki ayrı uygulama hedeflenmiştir.
+4.  **Makefile:** `Makefile` dosyanız, uygulama dosyalarını ve gerekli Contiki-NG modüllerini içerecek şekilde aşağıdaki gibi olmalıdır:
 
     ```makefile
-    CONTIKI_PROJECT = udp-ascon
+    CONTIKI_PROJECT = udp-client udp-server
     all: $(CONTIKI_PROJECT)
 
-    CONTIKI = ../../..
+    CFLAGS += -I$(CONTIKI_NG)/ascon
+    PROJECT_SOURCEFILES += ascon.c
+
+    CONTIKI=../..
     include $(CONTIKI)/Makefile.include
-    
-    PROJECT_SOURCEFILES += client.c
-    PROJECT_SOURCEFILES += server.c
-    
-    MODULES += os/services/shell
-    MODULES += tools/shell-commands
-    
-    MODULES += net/routing
-    MODULES += net/ipv6/simple-udp
-    MODULES += sys/log
-    MODULES += sys/energest
-    MODULES += os/lib/random
-    
     ```
+    Bu `Makefile`  dosyası, hem `udp-client` hem de `udp-server` uygulamalarının oluşturulmasını sağlar. Ayrıca Ascon kütüphanesini de projeye dahil eder.
+     
+    *   `CONTIKI_PROJECT = udp-client udp-server`: Bu satır, projede iki farklı uygulama olduğunu belirtir (`udp-client` ve `udp-server`).
+    *   `CFLAGS += -I$(CONTIKI_NG)/ascon`: Bu satır, derleyiciye, Ascon kütüphanesinin header dosyalarını bulması için gerekli include path'i belirtir.
+     *  `PROJECT_SOURCEFILES += ascon.c`: Bu satır, derleyiciye ascon.c kaynak dosyasının da derlenmesi gerektiğini belirtir.
+    *   `CONTIKI=../..`: Contiki-NG kaynak kodunun yer aldığı dizine göre bu değişkeni ayarlayın.
+    *   `include $(CONTIKI)/Makefile.include`:  Bu satır Contiki-NG'nin genel makefile ayarlarını içe aktarır.
 
 ## Çalıştırma
 
-1.  **Derleme:** Projeyi Contiki-NG derleme ortamınızda derleyin.
-2.  **Yükleme:** Derlenen kodu iki ayrı node'a yükleyin; birini istemci, diğerini sunucu olarak kullanın.
-3.  **İletişim:** Sunucu düğümünü çalıştırarak ağda root olmasını sağlayın. İstemci düğümü, sunucuya ulaşılabilir hale geldiğinde veri göndermeye başlayacaktır.
+1.  **Derleme:** Projeyi Contiki-NG derleme ortamınızda derleyin. Makefile dosyanız doğru yapılandırıldığı için, derleme işlemi `udp-client` ve `udp-server` uygulamalarının ayrı ayrı derlenmesini sağlayacaktır.
+2.  **Yükleme:** Derlenen `udp-client.sky` ve `udp-server.sky` dosyalarını iki ayrı node'a yükleyin; birini istemci (udp-client), diğerini sunucu (udp-server) olarak kullanın.
+3.  **İletişim:** Sunucu düğümünü (udp-server) çalıştırarak ağda root olmasını sağlayın. İstemci düğümü (udp-client), sunucuya ulaşılabilir hale geldiğinde veri göndermeye başlayacaktır.
 4.  **Log Takibi:** İstemci ve sunucu düğümlerinin log çıktılarını seri porttan veya ilgili arayüzden takip ederek iletişimi ve performansı gözlemleyebilirsiniz.
 
 ## Detaylar
